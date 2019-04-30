@@ -10,17 +10,18 @@
     </head>
     <body>
 
-    <div id="list-complete-demo" class="demo">
+    <div id="list-complete-demo" class="glass-game">
       <h4>{{header}}<h4>
-      <button v-on:click="shuffler" v-if="shuffle_button" class="shuffle">Перемешать</button>
-      <transition-group name="list-complete" tag="p">
+      <button v-on:click="shuffler" v-if="!sended" class="shuffle">Перемешать</button>
+      <button v-on:click="send" v-if="choosen_gift" class="send">Отправить подарок</button>
+      <transition-group name="list-complete" tag="p" class="shuffle-field">
         <span
           v-for="item in items"
           v-bind:key="item"
           class="list-complete-item"
         >
           <transition name="fade">
-              <img src="glass.png" v-if="show" class="glass" v-on:click="choose(item)" >
+              <img src="glass.png" v-if="show" class="glass noselect" onmousedown="return false" v-on:click="choose(item)" >
           </transition>
           <div v-if="show_gifts" class="gift">{{ item }}</div>
         </span>
@@ -30,18 +31,33 @@
         new Vue({
           el: '#list-complete-demo',
           data: {
+            cookie: undefined,
             header: "Перемешайте стаканы",
-            shuffle_button: true,
-            items: [1,2,3],
+            items: ["Набор для вышивания","Раскраска по номерам","Трикотажная пряжа"],
             show: false,
             show_gifts: true,
             shuffled: false,
-            choosen_gift: false
+            choosen_gift: false,
+            sended: false,
+          },
+          created: function () {
+            // On load app chek if gift sended or choosen
+            this.cookie = document.cookie.match(new RegExp(
+              "(?:^|; )" + 'test'.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+            if (decodeURIComponent(this.cookie[1]) == "send") {
+              this.send();
+            } else if (decodeURIComponent(this.cookie[1]) !== undefined) {
+              this.header = "Ваш выигрыш: " + this.cookie[1];
+              this.choosen_gift = true;
+            }
           },
           methods: {
             shuffler: function () {
+              // Main shuffle function
               this.show = true;
-              setTimeout(this.hider, 800);
+              this.choosen_gift = false;
+              this.shuffled = false;
+              setTimeout(this.hider, 700);
               setTimeout(this.shuffle, 2000);
               setTimeout(this.shuffle, 2700);
               setTimeout(this.shuffle, 3400);
@@ -49,24 +65,41 @@
               setTimeout(this.shuffle_block, 4800);
             },
             shuffle: function () {
+              // Single shuffle
               this.header = "Следите за стаканами";
               this.items = _.shuffle(this.items);
             },
             shuffle_block: function () {
+              // Choose gift after shuffle
               this.shuffled = true;
               this.header = "Выберите стакан";
             },
             hider: function () {
-              this.shuffle_button = false;
+              // Hide gifts
               this.show_gifts = false;
             },
+            shower: function () {
+               // Show gifts
+              this.show_gifts = true;
+            },
             choose: function (item) {
-            	if (this.shuffled === true && this.choosen_gift === false) {
-            	  this.choosen_gift = item;
-                  this.header = "Ваш выигрыш: " + item;
-                  this.show = false;
-                  this.show_gifts = true;
-                }
+              // If glasses are shuffled choose one of them to recive gift
+              if (this.shuffled === true) {
+                this.choosen_gift = item;
+                this.header = "Ваш выигрыш: " + item;
+                this.show = false;
+                setTimeout(this.shower, 300);
+                document.cookie="test=" + item;
+               }
+            },
+            send: function () {
+              // If gift sended to user hide interface elements
+              document.cookie="test=send";
+              this.header = "Ваш подарок отправлен";
+              this.show = false;
+              this.show_gifts = false;
+              this.choosen_gift = false;
+              this.sended = true;
             },
           }
         })
@@ -74,6 +107,8 @@
     <style>
         .glass {
            z-index: 900;
+           width: 150px;
+           margin-top: -95px;
         }
         .list-complete-item {
           transition: transform 0.5s;
@@ -83,23 +118,41 @@
           transition: all 1s;
         }
         .fade-enter, .fade-leave-to {
-        	transform: translateY(-150px);
+            opacity: 0;
+            transform: translateY(-150px);
         }
         .gift {
-          margin-top: -40px;
-          margin-left: 20px;
-          width: 58px;
-          height: 58px;
+          margin-top: -80px;
         }
         #list-complete-demo {
+          text-align: center;
           margin: 50px auto;
           width: 500px;
         }
-        .shuffle {
-          position: absolute;
-          margin-left: 180px;
-          margin-top: -40px;
+        .list-complete-item {
+           width: 150px;
         }
+        .shuffle-field {
+            padding-top:100px;
+            font-size:17px;
+        }
+        .shuffle {
+            position:absolute;
+            margin-top: -20px;
+            margin-left: -50px;
+        }
+        .send {
+            position:absolute;
+            margin-left: -70px;
+            margin-top: 3px;
+        }
+        .noselect {
+          -webkit-touch-callout: none;
+            -webkit-user-select: none;
+             -khtml-user-select: none;
+               -moz-user-select: none;
+                -ms-user-select: none;
+                    user-select: none;
+       }
     </style>
     </body>
-
