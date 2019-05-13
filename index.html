@@ -4,147 +4,177 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
         <title></title>
         <meta name="description" content="">
-        <meta name="viewport" content="width=device-width">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.14.1/lodash.min.js"></script>
+        <script src="https://mk-vorlon.herokuapp.com/vorlon.js"></script>
     </head>
     <body>
 
     <div id="list-complete-demo" class="glass-game">
+      <h1>Корзина подарков</h1>
+      <p v-if="show_text">Мы подготовили для вас <br>
+        целую корзину подарков! Сыграйте в игру и <br>
+        получите cюрприз<br>
+        Запомните расположение желаемого подарка и <br>
+      нажмите "Играть"!<br>
+      <img v-on:click="shuffler" class="shuffle" src="play.png" onmousedown="return false" ></p>
+
       <h4>{{header}}<h4>
-      <button v-on:click="shuffler" v-if="!sended" class="shuffle">Перемешать</button>
-      <button v-on:click="send" v-if="choosen_gift" class="send">Отправить подарок</button>
-      <transition-group name="list-complete" tag="p" class="shuffle-field">
+      <transition-group name="list-complete" tag="div" class="shuffle-field" v-if="!sended">
         <span
           v-for="item in items"
-          v-bind:key="item"
-          class="list-complete-item"
-        >
-          <transition name="fade">
-              <img src="glass.png" v-if="show" class="glass noselect" onmousedown="return false" v-on:click="choose(item)" >
-          </transition>
-          <div v-if="show_gifts" class="gift">{{ item }}</div>
+          v-bind:key="item.name"
+          class="list-complete-item">
+              <img v-if="!item.show" src="kart.png" class="glass noselect" onmousedown="return false" v-on:click="choose(item)" >
+              <div v-if="item.show" class="gift"><img v-bind:src="item.picture" class="gift"></div>
         </span>
       </transition-group>
+      <transition name="fade">
+        <div v-if="choosen_gift" class="buttons-bottom">
+          <img v-on:click="shuffler" class="shuffle" src="play_again.png" onmousedown="return false" >
+          <img v-on:click="send" class="send"  src="finish.png" onmousedown="return false" >
+        </div>
+      </transition>
     </div>
+
     <script>
         new Vue({
           el: '#list-complete-demo',
           data: {
             cookie: undefined,
-            header: "Перемешайте стаканы",
-            items: ["Набор для вышивания","Раскраска по номерам","Трикотажная пряжа"],
-            show: false,
-            show_gifts: true,
+            header: " ",
+            items: [{"picture":"pryaja.png", "show": true, "name": "пряжу"},
+                    {"picture":"stich.png", "show": true, "name": "вышивку"},
+                    {"picture": "sun.png", "show": true, "name": "летний подарок"}
+                   ],
+            show_text: true,
             shuffled: false,
             choosen_gift: false,
+            sending: false,
             sended: false,
+            main_offset: 0,
           },
           created: function () {
             // On load app chek if gift sended or choosen
-            this.cookie = document.cookie.match(new RegExp(
-              "(?:^|; )" + 'test'.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
-            if (decodeURIComponent(this.cookie[1]) == "send") {
-              this.send();
-            } else if (decodeURIComponent(this.cookie[1]) !== undefined) {
-              this.header = "Ваш выигрыш: " + this.cookie[1];
+            if (localStorage.send) {
+               this.send();
+            } else if (localStorage.items) {
+              this.items = JSON.parse(localStorage.items);
+              // Change header
+              try {
+                this.items.forEach(function(item) {
+                  if (item.show == true){
+                    throw item.name;
+                  }
+                });
+                  }
+              catch (e) {
+                this.header = "Вы выйграли " + e + "!";
+              }
               this.choosen_gift = true;
+              this.sending = true;
+              this.show_text = false;
             }
           },
           methods: {
             shuffler: function () {
               // Main shuffle function
-              this.show = true;
+              if (this.choosen_gift != false) {
+                this.main_offset = 1000;
+                this.shower();
+              } else {
+                this.main_offset = 0;
+              }
+              this.header = "Следите за подарками";
+              this.show_text = false;
+              this.sending = false;
               this.choosen_gift = false;
               this.shuffled = false;
-              setTimeout(this.hider, 700);
-              setTimeout(this.shuffle, 2000);
-              setTimeout(this.shuffle, 2700);
-              setTimeout(this.shuffle, 3400);
-              setTimeout(this.shuffle, 4100);
-              setTimeout(this.shuffle_block, 4800);
+              setTimeout(this.hider, this.main_offset + 700);
+              setTimeout(this.shuffle, this.main_offset + 2000);
+              setTimeout(this.shuffle, this.main_offset + 2700);
+              setTimeout(this.shuffle, this.main_offset + 3400);
+              setTimeout(this.shuffle, this.main_offset + 4100);
+              setTimeout(this.shuffle_block, this.main_offset + 4800);
             },
             shuffle: function () {
               // Single shuffle
-              this.header = "Следите за стаканами";
+              this.header = "Следите за корзинками";
               this.items = _.shuffle(this.items);
             },
             shuffle_block: function () {
               // Choose gift after shuffle
               this.shuffled = true;
-              this.header = "Выберите стакан";
+              this.header = "Найдите под какой корзинкой спрятан ваш подарок!";
             },
             hider: function () {
               // Hide gifts
-              this.show_gifts = false;
+              this.items.forEach(function(item) {
+                item.show = false;
+              });
             },
             shower: function () {
-               // Show gifts
-              this.show_gifts = true;
+              // Show gifts
+              this.items.forEach(function(item) {
+                item.show = true;
+              });
             },
             choose: function (item) {
               // If glasses are shuffled choose one of them to recive gift
-              if (this.shuffled === true) {
+              if (this.shuffled === true && this.choosen_gift == false) {
                 this.choosen_gift = item;
-                this.header = "Ваш выигрыш: " + item;
-                this.show = false;
-                setTimeout(this.shower, 300);
-                document.cookie="test=" + item;
+                this.sending = true;
+                this.header = "Вы выйграли " + item.name + "!";
+                item.show = true;
+                localStorage.items = JSON.stringify(this.items);
                }
             },
             send: function () {
               // If gift sended to user hide interface elements
-              document.cookie="test=send";
-              this.header = "Ваш подарок отправлен";
-              this.show = false;
-              this.show_gifts = false;
+              localStorage.send = true;
+              this.header = "Ваш подарок отправлен!";
               this.choosen_gift = false;
+              this.sending = false;
               this.sended = true;
+              this.show_text = false;
+              this.hider();
             },
           }
         })
     </script>
     <style>
+        body {
+          background: #640b01;
+        }
         .glass {
            z-index: 900;
-           width: 150px;
-           margin-top: -95px;
+           width:150px;
+           height: 200px;
+           margin-top: -80px;
         }
         .list-complete-item {
           transition: transform 0.5s;
           display: inline-block;
+          width: 150px;
+          padding-top:60px;
         }
         .fade-enter-active, .fade-leave-active {
-          transition: all 1s;
+          transition: all 0.5s;
         }
         .fade-enter, .fade-leave-to {
-            opacity: 0;
-            transform: translateY(-150px);
+          opacity: 0;
         }
         .gift {
-          margin-top: -80px;
+          margin-top: -10px;
+          height: 130px;
+          width: 130px;
         }
         #list-complete-demo {
           text-align: center;
-          margin: 50px auto;
-          width: 500px;
         }
-        .list-complete-item {
-           width: 150px;
-        }
-        .shuffle-field {
-            padding-top:100px;
-            font-size:17px;
-        }
-        .shuffle {
-            position:absolute;
-            margin-top: -20px;
-            margin-left: -50px;
-        }
-        .send {
-            position:absolute;
-            margin-left: -70px;
-            margin-top: 3px;
+        .shuffle, .send {
+            max-height:50px;
         }
         .noselect {
           -webkit-touch-callout: none;
@@ -154,5 +184,49 @@
                 -ms-user-select: none;
                     user-select: none;
        }
-    </style>
+       #list-complete-demo > p, h4{
+        color:white;
+        font-size:20px;
+       }
+      #list-complete-demo > h1{
+        color: orange;
+       }
+      @media (max-width: 500px) {
+        .list-complete-item {
+          transition: transform 0.5s;
+          display: inline-block;
+          width: 110px;
+          padding-top:60px;
+        }
+        .gift {
+          margin-top: -10px;
+          height: 110px;
+          width: 110px;
+        }
+        .glass {
+          z-index: 900;
+          width:130px;
+          height: 170px;
+          margin-top: -80px;
+        }
+      }
+      @media (max-width: 400px) {
+        .list-complete-item {
+          transition: transform 0.5s;
+          display: inline-block;
+          width: 100px;
+          padding-top:60px;
+        }
+        .gift {
+          margin-top: -10px;
+          height: 100px;
+          width: 100px;
+        }
+        .glass {
+           z-index: 900;
+           width:110px;
+           height: 170px;
+           margin-top: -80px;
+        }
+      }
     </body>
