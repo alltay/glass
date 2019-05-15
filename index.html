@@ -30,10 +30,16 @@
               <div v-if="item.show" class="gift"><img v-bind:src="item.picture" class="gift"></div>
         </span>
       </transition-group>
-      <transition name="fade">
+      <transition name="fade" v-if="!sending">
         <div v-if="choosen_gift" class="buttons-bottom">
           <img v-on:click="shuffler" class="shuffle" src="play_again.png" onmousedown="return false" >
-          <img v-on:click="send" class="send"  src="finish.png" onmousedown="return false" >
+          <img v-on:click="enter_mail" class="send"  src="finish.png" onmousedown="return false" >
+        </div>
+      </transition>
+      <transition name="fade" v-if="sending">
+        <div>
+            <p>баннер</p>
+            <button v-on:click="send">Отправить</button>
         </div>
       </transition>
     </div>
@@ -72,8 +78,10 @@
               catch (e) {
                 this.header = "Вы выйграли " + e + "!";
               }
+              if (localStorage.sending){
+                this.sending = localStorage.sending;
+              }
               this.choosen_gift = true;
-              this.sending = true;
               this.show_text = false;
             }
           },
@@ -124,11 +132,16 @@
               // If glasses are shuffled choose one of them to recive gift
               if (this.shuffled === true && this.choosen_gift == false) {
                 this.choosen_gift = item;
-                this.sending = true;
+                // this.sending = true;
                 this.header = "Вы выйграли " + item.name + "!";
                 item.show = true;
                 localStorage.items = JSON.stringify(this.items);
                }
+            },
+            enter_mail: function () {
+              // Show email_field
+                this.sending = true;
+                localStorage.sending = true;
             },
             send: function () {
               // If gift sended to user hide interface elements
@@ -136,6 +149,7 @@
               this.header = "Ваш подарок отправлен!";
               this.choosen_gift = false;
               this.sending = false;
+              localStorage.sending = false;
               this.sended = true;
               this.show_text = false;
               this.hider();
