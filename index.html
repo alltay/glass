@@ -7,7 +7,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.14.1/lodash.min.js"></script>
-        <script src="https://mk-vorlon.herokuapp.com/vorlon.js"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     </head>
     <body>
 
@@ -38,8 +38,35 @@
       </transition>
       <transition name="fade" v-if="sending">
         <div>
-            <p>баннер</p>
-            <button v-on:click="send">Отправить</button>
+            <form
+                  @submit="checkForm"
+                  action=""
+                  method="post"
+                  novalidate="true"
+                >
+                  <p>
+                    <p><img v-bind:src="choosen_data.banner_pic"></p>
+                    <label for="email">Email</label>
+                    <input
+                      id="email"
+                      v-model="email"
+                      type="email"
+                      name="email"
+                    >
+                  </p>
+                  <p v-if="errors.length">
+                    <ul>
+                      <li v-for="error in errors">{{ error }}</li>
+                    </ul>
+                  </p>
+                  <p>
+                    <input
+                      type="submit"
+                      value="Отправить"
+                    >
+                  </p>
+
+                </form>
         </div>
       </transition>
     </div>
@@ -50,33 +77,39 @@
           data: {
             cookie: undefined,
             header: " ",
-            items: [{"picture":"pryaja.png", "show": true, "name": "пряжу"},
-                    {"picture":"stich.png", "show": true, "name": "вышивку"},
-                    {"picture": "sun.png", "show": true, "name": "летний подарок"}
+            items: [
+                    {"picture":"pryaja.png", "show":true, "name":"пряжу", "banner_pic":"banner_pryaja.png"},
+                    {"picture":"stich.png", "show":true, "name":"вышивку", "banner_pic":"banner_stich.png"},
+                    {"picture":"sun.png", "show":true, "name":"летний подарок", "banner_pic":"banner_sun.png"}
                    ],
             show_text: true,
             shuffled: false,
             choosen_gift: false,
+            choosen_data: {},
             sending: false,
             sended: false,
             main_offset: 0,
+            errors: [],
+            email: null
           },
           created: function () {
             // On load app chek if gift sended or choosen
             if (localStorage.send) {
-               this.send();
+               this.sendPage();
             } else if (localStorage.items) {
               this.items = JSON.parse(localStorage.items);
               // Change header
               try {
                 this.items.forEach(function(item) {
                   if (item.show == true){
-                    throw item.name;
+                    throw item;
                   }
                 });
                   }
               catch (e) {
-                this.header = "Вы выйграли " + e + "!";
+                this.header = "Вы выиграли " + e.name + "!";
+                //Data for email banner
+                this.choosen_data = e;
               }
               if (localStorage.sending){
                 this.sending = localStorage.sending;
@@ -131,8 +164,8 @@
             choose: function (item) {
               // If glasses are shuffled choose one of them to recive gift
               if (this.shuffled === true && this.choosen_gift == false) {
-                this.choosen_gift = item;
-                // this.sending = true;
+                this.choosen_gift = true;
+                this.choosen_data = item;
                 this.header = "Вы выйграли " + item.name + "!";
                 item.show = true;
                 localStorage.items = JSON.stringify(this.items);
@@ -145,15 +178,48 @@
             },
             send: function () {
               // If gift sended to user hide interface elements
+              axios.post('http://127.0.0.1:8000/', {
+                    gift:this.items,
+                    mail:this.email
+                  })
+                  .then(function (response) {
+                    // Handle success
+                      sendPage();
+                  })
+                  .catch(function (error) {
+                    // Handle error
+                      alert('Произошла ошибка!');
+                  });
+            },
+            sendPage: function () {
+              // Change page if gift sended
               localStorage.send = true;
               this.header = "Ваш подарок отправлен!";
               this.choosen_gift = false;
+              this.choosen_data = {};
               this.sending = false;
               localStorage.sending = false;
               this.sended = true;
               this.show_text = false;
               this.hider();
             },
+            checkForm: function (e) {
+              this.errors = [];
+              if (!this.email) {
+                this.errors.push('Укажите электронную почту.');
+              } else if (!this.validEmail(this.email)) {
+                this.errors.push('Укажите корректный адрес электронной почты.');
+              }
+              if (!this.errors.length) {
+                this.send();
+              }
+              e.preventDefault();
+            },
+            validEmail: function (email) {
+            // Re to validate email
+              var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+              return re.test(email);
+            }
           }
         })
     </script>
@@ -243,4 +309,5 @@
            margin-top: -80px;
         }
       }
-    </body>
+    </style>
+</body>
